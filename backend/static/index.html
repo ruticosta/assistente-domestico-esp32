@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minha Casa — Assistente Doméstico Inteligente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #080c16;
+      --card: rgba(17, 24, 39, 0.82);
+      --surface: rgba(11, 17, 30, 0.78);
+      --border: rgba(148, 163, 184, 0.13);
+      --border-strong: rgba(148, 163, 184, 0.24);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --subtle: #64748b;
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.35);
+      --cyan: #06b6d4;
+      --success: #10b981;
+      --amber: #f59e0b;
+      --danger: #ef4444;
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(ellipse 75% 45% at 15% -10%, rgba(59, 130, 246, 0.14), transparent),
+        radial-gradient(ellipse 55% 40% at 88% 0%, rgba(6, 182, 212, 0.10), transparent);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 20px 44px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ===== TOPBAR LIMPA ===== */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      padding: 16px 22px;
+      background: var(--card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .brand-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 22px rgba(37, 99, 235, 0.3);
+      flex-shrink: 0;
+    }
+    .brand h1 { font-size: 1.18rem; font-weight: 700; letter-spacing: -0.02em; }
+    .brand p { font-size: 0.8rem; color: var(--muted); }
+
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+
+    .conn-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 13px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+      background: rgba(15, 23, 42, 0.75); border: 1px solid var(--border); color: var(--muted);
+    }
+    .conn-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    .conn-pill.online { color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3); background: rgba(6, 78, 59, 0.3); }
+
+    .tech-toggle-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 14px; border-radius: 999px; cursor: pointer;
+      background: rgba(15, 23, 42, 0.85); color: #cbd5e1;
+      border: 1px solid var(--border-strong);
+      font-family: inherit; font-size: 0.78rem; font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .tech-toggle-btn:hover { border-color: var(--primary); color: white; }
+    .tech-toggle-btn.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: var(--primary);
+      color: #93c5fd;
+    }
+
+    /* ===== MODO USUÁRIO (PRINCIPAL) ===== */
+    .user-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 0.95fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .card-title {
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    }
+    .card-title h2 { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .card-title span { font-size: 0.78rem; color: var(--muted); }
+
+    /* Planta Baixa 2D */
+    .floorplan-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .floorplan-svg { width: 100%; height: auto; display: block; border-radius: 10px; background: #090e1a; }
+    .room-group { cursor: pointer; }
+    .room-group:hover .room-wall { stroke: #60a5fa; }
+    .room-glow { opacity: 0; transition: opacity 0.35s ease; pointer-events: none; }
+    .room-group.lit .room-glow { opacity: 1; }
+    .bulb-core { fill: #334155; transition: fill 0.25s ease, filter 0.25s ease; }
+    .room-group.lit .bulb-core { fill: #f0f9ff; filter: drop-shadow(0 0 8px rgba(186, 230, 253, 0.9)); }
+    .room-status-txt { font-size: 10px; font-weight: 600; fill: #64748b; }
+    .room-group.lit .room-status-txt { fill: #bae6fd; }
+
+    .ac-unit { cursor: pointer; }
+    .ac-wind { opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+    .ac-unit.cooling .ac-wind { opacity: 1; }
+    .ac-wind path { stroke-dasharray: 6 6; animation: acFlow 1.1s linear infinite; }
+    @keyframes acFlow { from { stroke-dashoffset: 12; } to { stroke-dashoffset: 0; } }
+    .ac-led { fill: #475569; transition: fill 0.25s; }
+    .ac-unit.cooling .ac-led { fill: #22d3ee; filter: drop-shadow(0 0 6px #06b6d4); }
+    .ac-temp { font-family: "JetBrains Mono", monospace; font-size: 9px; fill: #64748b; font-weight: 700; }
+    .ac-unit.cooling .ac-temp { fill: #67e8f9; }
+
+    /* Cards dos 4 dispositivos */
+    .devices-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .device-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 15px 16px;
+      display: flex; flex-direction: column; gap: 12px;
+      cursor: pointer;
+      transition: transform 0.16s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .device-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+    .device-card.on {
+      border-color: rgba(147, 197, 253, 0.45);
+      background: linear-gradient(180deg, rgba(186, 230, 253, 0.10), rgba(11, 17, 30, 0.88));
+      box-shadow: 0 8px 22px rgba(147, 197, 253, 0.08);
+    }
+    .device-card.on.ac {
+      border-color: rgba(6, 182, 212, 0.55);
+      background: linear-gradient(180deg, rgba(6, 182, 212, 0.14), rgba(11, 17, 30, 0.88));
+      box-shadow: 0 8px 22px rgba(6, 182, 212, 0.14);
+    }
+    .dev-top { display: flex; justify-content: space-between; align-items: center; }
+    .dev-icon {
+      width: 38px; height: 38px; border-radius: 11px;
+      background: rgba(30, 41, 59, 0.85); color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .device-card.on .dev-icon { background: rgba(186, 230, 253, 0.18); color: #e0f2fe; box-shadow: 0 0 14px rgba(186, 230, 253, 0.22); }
+    .device-card.on.ac .dev-icon { background: rgba(6, 182, 212, 0.2); color: #22d3ee; box-shadow: none; }
+
+    .switch {
+      width: 42px; height: 24px; border-radius: 999px;
+      background: #1e293b; border: 1px solid var(--border-strong);
+      position: relative; transition: background 0.2s;
+    }
+    .switch::after {
+      content: ""; position: absolute; top: 3px; left: 3px;
+      width: 16px; height: 16px; border-radius: 50%; background: #94a3b8;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .device-card.on .switch { background: var(--success); border-color: var(--success); }
+    .device-card.on .switch::after { transform: translateX(18px); background: white; }
+
+    .dev-name { font-size: 0.94rem; font-weight: 600; }
+    .dev-state { font-size: 0.78rem; color: var(--muted); }
+    .device-card.on .dev-state { color: #bae6fd; }
+    .device-card.on.ac .dev-state { color: #67e8f9; }
+
+    /* Timer discreto no card do Ar-Condicionado */
+    .ac-timer-row {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
+      padding-top: 8px; border-top: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .timer-chip {
+      font-family: "JetBrains Mono", monospace; font-size: 0.68rem; font-weight: 600;
+      padding: 4px 8px; border-radius: 7px; cursor: pointer;
+      background: rgba(15, 23, 42, 0.85); color: #94a3b8;
+      border: 1px solid var(--border); transition: all 0.15s;
+    }
+    .timer-chip:hover { border-color: var(--cyan); color: #e0f2fe; background: rgba(6, 182, 212, 0.16); }
+    .timer-active-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: "JetBrains Mono", monospace; font-size: 0.72rem; font-weight: 600;
+      padding: 4px 9px; border-radius: 7px;
+      background: rgba(6, 182, 212, 0.18); color: #67e8f9;
+      border: 1px solid rgba(6, 182, 212, 0.4);
+    }
+    .timer-cancel-btn {
+      background: none; border: none; color: #fca5a5; cursor: pointer;
+      font-weight: 700; font-size: 0.82rem; line-height: 1; padding: 0 2px;
+    }
+
+    /* Assistente de Voz (Direita) */
+    .voice-stage {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 20px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 18px;
+    }
+    .mic-btn {
+      width: 96px; height: 96px; border-radius: 50%; border: none; cursor: pointer;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 14px 34px var(--primary-glow), inset 0 1px 1px rgba(255,255,255,0.25);
+      transition: transform 0.18s ease, box-shadow 0.2s ease;
+    }
+    .mic-btn:hover { transform: scale(1.05); }
+    .mic-btn.recording {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      animation: micPulse 1.3s infinite;
+    }
+    @keyframes micPulse {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.65); }
+      70% { box-shadow: 0 0 0 24px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    #waveform {
+      width: 100%; height: 44px; border-radius: 10px;
+      background: rgba(15, 23, 42, 0.65); border: 1px solid var(--border);
+    }
+    .voice-status { font-size: 0.86rem; color: var(--muted); text-align: center; min-height: 22px; }
+
+    .text-form { display: flex; gap: 8px; width: 100%; }
+    .text-form input {
+      flex: 1; padding: 12px 14px; border-radius: 11px;
+      border: 1px solid var(--border-strong);
+      background: rgba(7, 11, 20, 0.85); color: var(--text);
+      font-family: inherit; font-size: 0.88rem; outline: none;
+    }
+    .text-form input:focus { border-color: var(--primary); }
+    .text-form button {
+      padding: 0 16px; border-radius: 11px; border: none; cursor: pointer;
+      background: var(--primary); color: white; font-weight: 600; font-size: 0.86rem;
+    }
+    .text-form button:hover { background: #2563eb; }
+
+    .user-feedback {
+      border-radius: 12px; padding: 12px 15px; font-size: 0.86rem;
+      display: none; flex-direction: column; gap: 3px;
+    }
+    .user-feedback.show { display: flex; }
+    .user-feedback.ok { background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.35); color: #d1fae5; }
+    .user-feedback.err { background: rgba(239, 68, 68, 0.14); border: 1px solid rgba(239, 68, 68, 0.35); color: #fee2e2; }
+    .user-feedback .heard { font-size: 0.78rem; opacity: 0.8; }
+
+    .quick-all { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .pill-action {
+      padding: 10px 12px; border-radius: 11px; cursor: pointer;
+      background: var(--surface); border: 1px solid var(--border);
+      color: #cbd5e1; font-family: inherit; font-size: 0.82rem; font-weight: 600;
+      transition: all 0.15s;
+    }
+    .pill-action:hover { border-color: var(--primary); color: white; background: rgba(59, 130, 246, 0.14); }
+
+    /* ===== PAINEL TÉCNICO (OCULTO POR PADRÃO) ===== */
+    .tech-panel {
+      display: none;
+      flex-direction: column;
+      gap: 18px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border-strong);
+      animation: fadeIn 0.25s ease;
+    }
+    .tech-panel.open { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .tech-banner {
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+    }
+    .tech-banner h3 { font-size: 0.92rem; color: #93c5fd; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+    .tech-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .mono-chip {
+      font-family: "JetBrains Mono", monospace; font-size: 0.74rem; font-weight: 600;
+      padding: 5px 10px; border-radius: 8px;
+      background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border); color: #93c5fd;
+    }
+    .mono-chip.esp-on { color: #6ee7b7; border-color: rgba(16, 185, 129, 0.35); }
+    .mono-chip.esp-wait { color: #fcd34d; border-color: rgba(245, 158, 11, 0.3); }
+
+    .pipeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .pipe-node {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 11px 13px; display: flex; align-items: center; gap: 9px; transition: all 0.25s;
+    }
+    .pipe-node.active { border-color: var(--primary); background: rgba(37, 99, 235, 0.16); }
+    .pipe-node.ok { border-color: var(--success); background: rgba(16, 185, 129, 0.14); }
+    .pipe-node.err { border-color: var(--danger); background: rgba(239, 68, 68, 0.16); }
+    .pipe-step {
+      width: 26px; height: 26px; border-radius: 7px; background: rgba(148, 163, 184, 0.12);
+      font-family: "JetBrains Mono", monospace; font-size: 0.75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .pipe-node.active .pipe-step { background: var(--primary); color: white; }
+    .pipe-node.ok .pipe-step { background: var(--success); color: white; }
+    .pipe-node.err .pipe-step { background: var(--danger); color: white; }
+    .pipe-title { font-size: 0.8rem; font-weight: 700; }
+    .pipe-desc { font-size: 0.7rem; color: var(--muted); }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .kpi {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 14px 16px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .kpi-label { font-size: 0.74rem; color: var(--muted); font-weight: 600; }
+    .kpi-value { font-size: 1.45rem; font-weight: 800; font-family: "JetBrains Mono", monospace; }
+    .kpi-sub { font-size: 0.72rem; color: var(--subtle); }
+
+    .reg-values { display: flex; gap: 10px; flex-wrap: wrap; font-family: "JetBrains Mono", monospace; font-size: 0.82rem; }
+    .reg-values span { background: rgba(15, 23, 42, 0.9); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); color: var(--muted); }
+    .reg-values strong { color: #38bdf8; }
+
+    .bits-row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 7px; }
+    .bit-cell {
+      background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      font-family: "JetBrains Mono", monospace;
+    }
+    .bit-cell.unused { opacity: 0.45; }
+    .bit-cell.on { border-color: var(--success); background: rgba(16, 185, 129, 0.18); }
+    .bit-cell .q-lbl { font-size: 0.68rem; color: var(--muted); }
+    .bit-cell .q-val { font-size: 1.1rem; font-weight: 700; }
+    .bit-cell.on .q-val { color: #6ee7b7; }
+    .bit-cell .q-pin { font-size: 0.62rem; color: var(--subtle); }
+
+    .quick-cmds { display: flex; flex-wrap: wrap; gap: 8px; }
+    .quick-btn {
+      font-size: 0.75rem; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+      background: rgba(15, 23, 42, 0.85); color: #cbd5e1; border: 1px solid var(--border);
+    }
+    .quick-btn:hover { border-color: var(--primary); color: white; }
+    .quick-btn.test-err:hover { border-color: var(--danger); color: #fecaca; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th { text-align: left; padding: 9px 10px; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 10px; border-bottom: 1px solid rgba(148, 163, 184, 0.08); }
+    .origin-tag { font-family: "JetBrains Mono", monospace; font-size: 0.68rem; font-weight: 600; padding: 3px 7px; border-radius: 6px; background: rgba(59, 130, 246, 0.15); color: #93c5fd; }
+    .badge-valid { padding: 3px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+    .badge-invalid { padding: 3px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+    code.mask { font-family: "JetBrains Mono", monospace; font-size: 0.76rem; background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border); padding: 2px 6px; border-radius: 5px; color: #38bdf8; }
+
+    @media (max-width: 920px) {
+      .user-grid { grid-template-columns: 1fr; }
+      .pipeline { grid-template-columns: 1fr 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 540px) {
+      .devices-grid { grid-template-columns: 1fr; }
+      .pipeline { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- TOPBAR LIMPA -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Minha Casa</h1>
+          <p>Assistente Doméstico Inteligente</p>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="conn-pill online">
+          <span class="dot"></span>
+          <span id="activeSummary">Tudo desligado</span>
+        </div>
+        <button id="techToggleBtn" class="tech-toggle-btn" type="button" title="Mostrar/ocultar detalhes de Arquitetura e Hardware">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2"/>
+            <rect x="9" y="9" width="6" height="6"/>
+            <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>
+          </svg>
+          Modo Técnico
+        </button>
+      </div>
+    </header>
+
+    <!-- MODO USUÁRIO: LIMPO E DIRETO -->
+    <main class="user-grid">
+      <!-- ESQUERDA: PLANTA BAIXA + 4 CONTROLES -->
+      <section class="card">
+        <div class="card-title">
+          <h2>Ambientes</h2>
+          <span>Toque em um cômodo ou controle abaixo</span>
+        </div>
+
+        <div class="floorplan-box">
+          <svg class="floorplan-svg" viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="ledWhiteGlow" cx="50%" cy="50%" r="58%">
+                <stop offset="0%" stop-color="#e0f2fe" stop-opacity="0.34"/>
+                <stop offset="50%" stop-color="#7dd3fc" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+              </radialGradient>
+              <linearGradient id="coolGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.28"/>
+                <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+
+            <!-- QUARTO -->
+            <g class="room-group" id="fp-room-0" data-bit="0">
+              <rect class="room-wall" x="12" y="12" width="210" height="226" rx="8" fill="#111827" stroke="#334155" stroke-width="2.5"/>
+              <rect class="room-glow" x="14" y="14" width="206" height="222" rx="6" fill="url(#ledWhiteGlow)"/>
+              <rect x="28" y="125" width="90" height="96" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+              <rect x="35" y="133" width="34" height="20" rx="4" fill="#334155"/>
+              <rect x="75" y="133" width="34" height="20" rx="4" fill="#334155"/>
+              <line x1="28" y1="165" x2="118" y2="165" stroke="#475569" stroke-width="1.5"/>
+              <rect x="126" y="128" width="24" height="24" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1.2"/>
+              <circle cx="117" cy="90" r="14" fill="rgba(15,23,42,0.7)" stroke="#475569" stroke-width="1.5"/>
+              <circle class="bulb-core" cx="117" cy="90" r="7"/>
+              <text x="26" y="34" fill="#cbd5e1" font-size="12" font-weight="700">QUARTO</text>
+              <text class="room-status-txt" id="fp-txt-0" x="26" y="49">Apagada</text>
+            </g>
+
+            <!-- AR-CONDICIONADO SPLIT -->
+            <g class="ac-unit" id="fp-ac-3" data-bit="3">
+              <g class="ac-wind">
+                <rect x="132" y="44" width="76" height="72" fill="url(#coolGlow)" rx="6"/>
+                <path d="M148 48 Q144 66 148 84 Q152 100 146 112" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+                <path d="M170 48 Q166 66 170 84 Q174 100 168 112" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round"/>
+                <path d="M192 48 Q188 66 192 84 Q196 100 190 112" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+              </g>
+              <rect x="130" y="18" width="80" height="26" rx="5" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+              <line x1="138" y1="38" x2="202" y2="38" stroke="#475569" stroke-width="2"/>
+              <circle class="ac-led" cx="141" cy="28" r="3"/>
+              <text class="ac-temp" id="fp-txt-3" x="152" y="31">OFF</text>
+            </g>
+
+            <!-- SALA -->
+            <g class="room-group" id="fp-room-1" data-bit="1">
+              <rect class="room-wall" x="228" y="12" width="192" height="226" rx="8" fill="#111827" stroke="#334155" stroke-width="2.5"/>
+              <rect class="room-glow" x="230" y="14" width="188" height="222" rx="6" fill="url(#ledWhiteGlow)"/>
+              <rect x="266" y="110" width="116" height="68" rx="6" fill="#172033" stroke="#334155" stroke-dasharray="4 3"/>
+              <rect x="266" y="186" width="116" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+              <rect x="274" y="192" width="100" height="10" rx="3" fill="#334155"/>
+              <rect x="278" y="22" width="92" height="14" rx="3" fill="#1e293b" stroke="#475569" stroke-width="1.2"/>
+              <circle cx="324" cy="124" r="14" fill="rgba(15,23,42,0.7)" stroke="#475569" stroke-width="1.5"/>
+              <circle class="bulb-core" cx="324" cy="124" r="7"/>
+              <text x="242" y="54" fill="#cbd5e1" font-size="12" font-weight="700">SALA</text>
+              <text class="room-status-txt" id="fp-txt-1" x="242" y="69">Apagada</text>
+            </g>
+
+            <!-- COZINHA -->
+            <g class="room-group" id="fp-room-2" data-bit="2">
+              <rect class="room-wall" x="426" y="12" width="162" height="226" rx="8" fill="#111827" stroke="#334155" stroke-width="2.5"/>
+              <rect class="room-glow" x="428" y="14" width="158" height="222" rx="6" fill="url(#ledWhiteGlow)"/>
+              <rect x="544" y="26" width="32" height="196" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+              <circle cx="560" cy="64" r="7" fill="#0f172a" stroke="#64748b"/>
+              <circle cx="560" cy="84" r="7" fill="#0f172a" stroke="#64748b"/>
+              <rect x="550" y="138" width="20" height="32" rx="3" fill="#0f172a" stroke="#64748b"/>
+              <rect x="444" y="156" width="66" height="58" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1.4"/>
+              <circle cx="496" cy="108" r="14" fill="rgba(15,23,42,0.7)" stroke="#475569" stroke-width="1.5"/>
+              <circle class="bulb-core" cx="496" cy="108" r="7"/>
+              <text x="440" y="34" fill="#cbd5e1" font-size="12" font-weight="700">COZINHA</text>
+              <text class="room-status-txt" id="fp-txt-2" x="440" y="49">Apagada</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="devices-grid" id="devicesGrid"></div>
+      </section>
+
+      <!-- DIREITA: ASSISTENTE DE VOZ -->
+      <section class="card">
+        <div class="card-title">
+          <h2>Comando de Voz</h2>
+          <span>Fale naturalmente</span>
+        </div>
+
+        <div class="voice-stage">
+          <button id="micBtn" class="mic-btn" title="Toque para falar">
+            <svg id="micIcon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+          </button>
+
+          <canvas id="waveform" width="400" height="44"></canvas>
+
+          <p class="voice-status" id="voiceStatus">
+            Toque no microfone e diga, por exemplo: <strong>"ligar a luz do quarto"</strong>
+          </p>
+        </div>
+
+        <form class="text-form" id="textForm">
+          <input type="text" id="textInput" placeholder="Ou digite um comando..." autocomplete="off" />
+          <button type="submit">Enviar</button>
+        </form>
+
+        <div class="quick-all">
+          <button type="button" class="pill-action" data-cmd="ligar tudo">Ligar tudo</button>
+          <button type="button" class="pill-action" data-cmd="desligar tudo">Desligar tudo</button>
+        </div>
+
+        <div id="userFeedback" class="user-feedback">
+          <strong id="ufMain"></strong>
+          <span class="heard" id="ufSub"></span>
+        </div>
+      </section>
+    </main>
+
+    <!-- ===== MODO TÉCNICO (EXIBIDO APENAS QUANDO ATIVADO) ===== -->
+    <section id="techPanel" class="tech-panel">
+      <div class="tech-banner">
+        <h3>Painel Técnico • Arquitetura de Computadores (UFT)</h3>
+        <div class="tech-badges">
+          <span class="mono-chip">FastAPI + PostgreSQL (Docker)</span>
+          <span class="mono-chip esp-wait" id="espChip">ESP32: Aguardando Wi-Fi</span>
+        </div>
+      </div>
+
+      <!-- Fluxo Distribuído -->
+      <div class="card" style="padding: 16px 20px;">
+        <div class="card-title">
+          <h2>Fluxo de Processamento Distribuído</h2>
+          <span>Edge ↔ Backend ↔ Persistência</span>
+        </div>
+        <div class="pipeline">
+          <div class="pipe-node" id="pipe-1"><div class="pipe-step">01</div><div><div class="pipe-title">Captura de Voz</div><div class="pipe-desc">Cliente Web</div></div></div>
+          <div class="pipe-node" id="pipe-2"><div class="pipe-step">02</div><div><div class="pipe-title">FastAPI + STT</div><div class="pipe-desc">Transcrição &amp; NLP</div></div></div>
+          <div class="pipe-node" id="pipe-3"><div class="pipe-step">03</div><div><div class="pipe-title">PostgreSQL</div><div class="pipe-desc">Estado &amp; Log</div></div></div>
+          <div class="pipe-node" id="pipe-4"><div class="pipe-step">04</div><div><div class="pipe-title">ESP32 Wi-Fi</div><div class="pipe-desc">GET Bitmask</div></div></div>
+          <div class="pipe-node" id="pipe-5"><div class="pipe-step">05</div><div><div class="pipe-title">74HC595 → Relés</div><div class="pipe-desc">Shift Out 4ch</div></div></div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi"><span class="kpi-label">Cargas Ativas</span><span class="kpi-value" id="kpiActive">0 / 4</span><span class="kpi-sub">Relés acionados</span></div>
+        <div class="kpi"><span class="kpi-label">Comandos no Banco</span><span class="kpi-value" id="kpiTotal">0</span><span class="kpi-sub">PostgreSQL</span></div>
+        <div class="kpi"><span class="kpi-label">Taxa de Acerto</span><span class="kpi-value" id="kpiAccuracy">100%</span><span class="kpi-sub" id="kpiValidSplit">0 válidos • 0 inválidos</span></div>
+        <div class="kpi"><span class="kpi-label">Latência API</span><span class="kpi-value" id="kpiLatency">—</span><span class="kpi-sub">STT + NLP + SQL</span></div>
+      </div>
+
+      <!-- Registrador 74HC595 + Atalhos de Teste -->
+      <div class="card">
+        <div class="card-title">
+          <h2>Registrador de Deslocamento 74HC595 (3 GPIOs → 8 Saídas)</h2>
+          <div class="reg-values">
+            <span>BIN <strong id="maskBin">0b00000000</strong></span>
+            <span>HEX <strong id="maskHex">0x00</strong></span>
+            <span>DEC <strong id="maskDec">0</strong></span>
+          </div>
+        </div>
+
+        <div class="bits-row" id="bitsRow"></div>
+
+        <div class="quick-cmds">
+          <button type="button" class="quick-btn" data-cmd="ligar a luz do quarto">Testar Q0 (Quarto)</button>
+          <button type="button" class="quick-btn" data-cmd="ligar a luz da sala">Testar Q1 (Sala)</button>
+          <button type="button" class="quick-btn" data-cmd="ligar a luz da cozinha">Testar Q2 (Cozinha)</button>
+          <button type="button" class="quick-btn" data-cmd="ar condicionado temperatura minima">Ar: Mínima (16°C)</button>
+          <button type="button" class="quick-btn" data-cmd="ar condicionado temperatura ambiente">Ar: Ambiente (24°C)</button>
+          <button type="button" class="quick-btn test-err" data-cmd="abrir a janela">Simular Erro (LED Feedback)</button>
+        </div>
+      </div>
+
+      <!-- Histórico PostgreSQL -->
+      <div class="card">
+        <div class="card-title">
+          <h2>Histórico Analítico (PostgreSQL)</h2>
+          <span style="font-family: 'JetBrains Mono', monospace;">GET /api/history</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Horário</th>
+                <th>Origem</th>
+                <th>Comando</th>
+                <th>Status</th>
+                <th>Máscara</th>
+                <th>Retorno</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const techToggleBtn = document.getElementById("techToggleBtn");
+    const techPanel = document.getElementById("techPanel");
+    const activeSummary = document.getElementById("activeSummary");
+    const micBtn = document.getElementById("micBtn");
+    const micIcon = document.getElementById("micIcon");
+    const voiceStatus = document.getElementById("voiceStatus");
+    const textForm = document.getElementById("textForm");
+    const textInput = document.getElementById("textInput");
+    const userFeedback = document.getElementById("userFeedback");
+    const ufMain = document.getElementById("ufMain");
+    const ufSub = document.getElementById("ufSub");
+    const devicesGrid = document.getElementById("devicesGrid");
+    const maskBin = document.getElementById("maskBin");
+    const maskHex = document.getElementById("maskHex");
+    const maskDec = document.getElementById("maskDec");
+    const bitsRow = document.getElementById("bitsRow");
+    const historyBody = document.getElementById("historyBody");
+    const espChip = document.getElementById("espChip");
+    const kpiActive = document.getElementById("kpiActive");
+    const kpiTotal = document.getElementById("kpiTotal");
+    const kpiAccuracy = document.getElementById("kpiAccuracy");
+    const kpiValidSplit = document.getElementById("kpiValidSplit");
+    const kpiLatency = document.getElementById("kpiLatency");
+    const waveCanvas = document.getElementById("waveform");
+    const waveCtx = waveCanvas.getContext("2d");
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    let audioContext = null;
+    let analyser = null;
+    let animFrame = null;
+    let lastDevicesByBit = {};
+
+    const PIN_MAP_74HC595 = { 0: "Pino 15", 1: "Pino 1", 2: "Pino 2", 3: "Pino 3", 4: "Pino 4", 5: "Pino 5", 6: "Pino 6", 7: "Pino 7" };
+
+    // Toggle Modo Técnico
+    techToggleBtn.addEventListener("click", () => {
+      const isOpen = techPanel.classList.toggle("open");
+      techToggleBtn.classList.toggle("active", isOpen);
+      if (isOpen) {
+        techPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+
+    // Pipeline técnico
+    function resetPipeline() {
+      for (let i = 1; i <= 5; i++) document.getElementById("pipe-" + i).className = "pipe-node";
+    }
+    function animatePipeline(valid) {
+      resetPipeline();
+      const steps = valid ? [1, 2, 3, 4, 5] : [1, 2, 3];
+      steps.forEach((n, idx) => {
+        setTimeout(() => {
+          const el = document.getElementById("pipe-" + n);
+          if (!valid && n === 2) el.classList.add("err");
+          else el.classList.add(idx === steps.length - 1 ? (valid ? "ok" : "err") : "active");
+        }, idx * 140);
+      });
+      setTimeout(() => {
+        if (valid) for (let i = 1; i <= 5; i++) document.getElementById("pipe-" + i).className = "pipe-node ok";
+      }, steps.length * 140 + 100);
+      setTimeout(resetPipeline, 3200);
+    }
+
+    // Waveform
+    function drawIdleWave() {
+      const w = waveCanvas.width, h = waveCanvas.height;
+      waveCtx.clearRect(0, 0, w, h);
+      waveCtx.strokeStyle = "rgba(148, 163, 184, 0.22)";
+      waveCtx.lineWidth = 2;
+      waveCtx.beginPath();
+      waveCtx.moveTo(14, h / 2);
+      waveCtx.lineTo(w - 14, h / 2);
+      waveCtx.stroke();
+    }
+    function startWaveVisualizer(stream) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 128;
+      source.connect(analyser);
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      function renderFrame() {
+        animFrame = requestAnimationFrame(renderFrame);
+        analyser.getByteFrequencyData(dataArray);
+        const w = waveCanvas.width, h = waveCanvas.height;
+        waveCtx.clearRect(0, 0, w, h);
+        const barWidth = (w - 24) / dataArray.length;
+        for (let i = 0; i < dataArray.length; i++) {
+          const barH = Math.max(4, (dataArray[i] / 255) * (h - 10));
+          waveCtx.fillStyle = isRecording ? "#f87171" : "#60a5fa";
+          waveCtx.fillRect(12 + i * barWidth, (h - barH) / 2, Math.max(2, barWidth - 2), barH);
+        }
+      }
+      renderFrame();
+    }
+    function stopWaveVisualizer() {
+      if (animFrame) cancelAnimationFrame(animFrame);
+      if (audioContext) { audioContext.close().catch(() => {}); audioContext = null; }
+      drawIdleWave();
+    }
+    drawIdleWave();
+
+    function isAirConditioner(d) {
+      return d.bit_posicao === 3 || d.nome.toLowerCase().includes("condicionado");
+    }
+
+    // Ícones SVG
+    function getDeviceIcon(d) {
+      if (isAirConditioner(d)) {
+        return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/>
+          <path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/>
+        </svg>`;
+      }
+      return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/>
+        <path d="M9 18h6"/><path d="M10 22h4"/>
+      </svg>`;
+    }
+
+    function showUserFeedback(data) {
+      userFeedback.className = "user-feedback show " + (data.valid ? "ok" : "err");
+      if (data.valid) {
+        if (data.action === "temperatura" || data.action === "timer") {
+          ufMain.textContent = data.message;
+        } else {
+          ufMain.textContent = data.target_name
+            ? `${data.target_name}: ${data.action === "desligar" ? "desligado" : data.action === "ligar" ? "ligado" : "alternado"}`
+            : data.message;
+        }
+      } else {
+        ufMain.textContent = "Não entendi o comando";
+      }
+      ufSub.textContent = data.transcribed_text ? `Você disse: "${data.transcribed_text}"` : data.message;
+      if (data.processing_time_ms) kpiLatency.textContent = `${data.processing_time_ms}ms`;
+      animatePipeline(data.valid);
+    }
+
+    function formatCountdown(totalSec) {
+      const s = Math.max(0, Math.floor(totalSec));
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
+      return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    }
+
+    let acTimerTargetMs = null;
+    let lastDesligarEmIso = null;
+
+    async function setDeviceTimer(id, seconds) {
+      const res = await fetch(`/api/devices/${id}/timer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ duration_seconds: seconds }),
+      });
+      const data = await res.json();
+      renderDevices(data);
+      showUserFeedback({ ...data, transcribed_text: "" });
+      loadAll();
+    }
+
+    function formatAcTempLabel(temp) {
+      const t = temp ?? 22;
+      if (t <= 16) return `Ligado • ${t}°C (Mínima)`;
+      if (t === 24) return `Ligado • ${t}°C (Ambiente)`;
+      return `Ligado • ${t}°C`;
+    }
+
+    function updateFloorplan(devices) {
+      lastDevicesByBit = {};
+      let activeCount = 0;
+      devices.forEach((d) => {
+        lastDevicesByBit[d.bit_posicao] = d;
+        if (d.estado) activeCount++;
+        if (d.bit_posicao <= 2) {
+          const roomEl = document.getElementById("fp-room-" + d.bit_posicao);
+          const txtEl = document.getElementById("fp-txt-" + d.bit_posicao);
+          if (roomEl) roomEl.classList.toggle("lit", d.estado);
+          if (txtEl) txtEl.textContent = d.estado ? "Acesa" : "Apagada";
+        } else if (d.bit_posicao === 3) {
+          const acEl = document.getElementById("fp-ac-3");
+          const txtEl = document.getElementById("fp-txt-3");
+          const temp = d.temperatura ?? 22;
+          if (acEl) {
+            acEl.classList.toggle("cooling", d.estado);
+            acEl.querySelectorAll(".ac-wind path").forEach((p) => {
+              p.style.animationDuration = temp <= 18 ? "0.55s" : temp >= 24 ? "1.6s" : "1.1s";
+            });
+          }
+          if (txtEl) txtEl.textContent = d.estado ? `${temp}°C` : "OFF";
+        }
+      });
+      activeSummary.textContent =
+        activeCount === 0 ? "Tudo desligado" :
+        activeCount === 1 ? "1 dispositivo ligado" : `${activeCount} dispositivos ligados`;
+    }
+
+    function renderDevices(data) {
+      updateFloorplan(data.devices);
+
+      // Atualiza painel técnico do 74HC595
+      maskBin.textContent = "0b" + data.binary;
+      maskHex.textContent = data.hex || ("0x" + data.bitmask.toString(16).toUpperCase().padStart(2, "0"));
+      maskDec.textContent = data.bitmask;
+
+      if (data.esp32) {
+        if (data.esp32.online) {
+          espChip.className = "mono-chip esp-on";
+          espChip.textContent = `ESP32 Online (${data.esp32.ip || "Wi-Fi"})`;
+        } else {
+          espChip.className = "mono-chip esp-wait";
+          espChip.textContent = data.esp32.last_seen_seconds !== null
+            ? `ESP32 Offline (há ${data.esp32.last_seen_seconds}s)`
+            : "ESP32: Aguardando Wi-Fi";
+        }
+      }
+
+      bitsRow.innerHTML = "";
+      for (let i = 7; i >= 0; i--) {
+        const bitVal = (data.bitmask >> i) & 1;
+        const cell = document.createElement("div");
+        cell.className = "bit-cell" + (bitVal ? " on" : "") + (i > 3 ? " unused" : "");
+        cell.innerHTML = `<span class="q-lbl">Q${i}</span><span class="q-val">${bitVal}</span><span class="q-pin">${PIN_MAP_74HC595[i]}</span>`;
+        bitsRow.appendChild(cell);
+      }
+
+      // Cards limpos do usuário
+      devicesGrid.innerHTML = "";
+      let foundActiveTimer = false;
+      data.devices.forEach((d) => {
+        const isAc = isAirConditioner(d);
+        const card = document.createElement("div");
+        card.className = "device-card" + (d.estado ? " on" : "") + (isAc ? " ac" : "");
+        const stateLabel = isAc ? (d.estado ? formatAcTempLabel(d.temperatura) : "Desligado") : (d.estado ? "Acesa" : "Apagada");
+
+        let timerHtml = "";
+        if (isAc) {
+          if (d.estado && d.desligar_em) {
+            foundActiveTimer = true;
+            if (d.desligar_em !== lastDesligarEmIso) {
+              lastDesligarEmIso = d.desligar_em;
+              acTimerTargetMs = new Date(d.desligar_em).getTime();
+            }
+            const leftNow = Math.max(0, Math.ceil((acTimerTargetMs - Date.now()) / 1000));
+            timerHtml = `
+              <div class="ac-timer-row">
+                <span class="timer-active-badge">
+                  Desliga em <span id="acCountdown">${formatCountdown(leftNow)}</span>
+                  <button type="button" class="timer-cancel-btn" data-cancel-timer="${d.id}" title="Cancelar timer">×</button>
+                </span>
+              </div>
+            `;
+          } else {
+            timerHtml = `
+              <div class="ac-timer-row">
+                <span style="font-size:0.7rem;color:#64748b;">Timer:</span>
+                <button type="button" class="timer-chip" data-timer-id="${d.id}" data-timer-sec="15">15s</button>
+                <button type="button" class="timer-chip" data-timer-id="${d.id}" data-timer-sec="1800">30m</button>
+                <button type="button" class="timer-chip" data-timer-id="${d.id}" data-timer-sec="3600">1h</button>
+                <button type="button" class="timer-chip" data-timer-id="${d.id}" data-timer-sec="7200">2h</button>
+              </div>
+            `;
+          }
+        }
+
+        card.innerHTML = `
+          <div class="dev-top">
+            <div class="dev-icon">${getDeviceIcon(d)}</div>
+            <div class="switch"></div>
+          </div>
+          <div>
+            <div class="dev-name">${d.nome}</div>
+            <div class="dev-state">${stateLabel}</div>
+          </div>
+          ${timerHtml}
+        `;
+
+        card.querySelectorAll("[data-timer-sec]").forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            setDeviceTimer(Number(btn.dataset.timerId), Number(btn.dataset.timerSec));
+          });
+        });
+        card.querySelectorAll("[data-cancel-timer]").forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            setDeviceTimer(Number(btn.dataset.cancelTimer), 0);
+          });
+        });
+
+        card.addEventListener("click", () => toggleDevice(d.id));
+        devicesGrid.appendChild(card);
+      });
+      if (!foundActiveTimer) {
+        acTimerTargetMs = null;
+        lastDesligarEmIso = null;
+      }
+    }
+
+    // Clique na planta baixa
+    [0, 1, 2].forEach((bit) => {
+      document.getElementById("fp-room-" + bit)?.addEventListener("click", () => {
+        if (lastDevicesByBit[bit]) toggleDevice(lastDevicesByBit[bit].id);
+      });
+    });
+    document.getElementById("fp-ac-3")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (lastDevicesByBit[3]) toggleDevice(lastDevicesByBit[3].id);
+    });
+
+    function formatHora(iso) {
+      if (!iso) return "—";
+      try { return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
+      catch { return "—"; }
+    }
+
+    async function loadAll() {
+      try {
+        const [devRes, statRes, histRes] = await Promise.all([
+          fetch("/api/devices"),
+          fetch("/api/stats"),
+          fetch("/api/history?limit=12"),
+        ]);
+        const devData = await devRes.json();
+        const statData = await statRes.json();
+        const histData = await histRes.json();
+
+        renderDevices(devData);
+        kpiActive.textContent = `${statData.active_devices} / ${statData.total_devices}`;
+        kpiTotal.textContent = statData.total_commands;
+        kpiAccuracy.textContent = `${statData.accuracy_percent}%`;
+        kpiValidSplit.textContent = `${statData.valid_commands} válidos • ${statData.invalid_commands} inválidos`;
+
+        historyBody.innerHTML = histData.map((r) => `
+          <tr>
+            <td style="font-family:'JetBrains Mono',monospace;color:#64748b;">#${r.id}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:0.76rem;color:#94a3b8;">${formatHora(r.criado_em)}</td>
+            <td><span class="origin-tag">${r.origem.replace("web_", "").toUpperCase()}</span></td>
+            <td>${r.texto_transcrito}</td>
+            <td>${r.comando_valido ? '<span class="badge-valid">VÁLIDO</span>' : '<span class="badge-invalid">INVÁLIDO</span>'}</td>
+            <td><code class="mask">0b${r.binario}</code></td>
+            <td style="color:#94a3b8;font-size:0.78rem;">${r.mensagem_retorno}</td>
+          </tr>
+        `).join("");
+      } catch (e) { console.error(e); }
+    }
+
+    async function sendTextCommand(text) {
+      const res = await fetch("/api/command/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, origem: "web_texto" }),
+      });
+      const data = await res.json();
+      renderDevices(data);
+      showUserFeedback(data);
+      loadAll();
+    }
+
+    async function toggleDevice(id) {
+      const res = await fetch(`/api/devices/${id}/toggle`, { method: "POST" });
+      const data = await res.json();
+      renderDevices(data);
+      showUserFeedback({ ...data, transcribed_text: "" });
+      loadAll();
+    }
+
+    textForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = textInput.value.trim();
+      if (!text) return;
+      textInput.value = "";
+      await sendTextCommand(text);
+    });
+
+    document.querySelectorAll("[data-cmd]").forEach((btn) => {
+      btn.addEventListener("click", () => sendTextCommand(btn.dataset.cmd));
+    });
+
+    // Gravação de voz
+    micBtn.addEventListener("click", async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showUserFeedback({ valid: false, transcribed_text: "", message: "Acesse em http://localhost:8000 para usar o microfone." });
+        return;
+      }
+
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioChunks = [];
+          mediaRecorder = new MediaRecorder(stream);
+          startWaveVisualizer(stream);
+
+          mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+          mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach((t) => t.stop());
+            stopWaveVisualizer();
+            voiceStatus.textContent = "Entendendo seu comando...";
+
+            const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+            const formData = new FormData();
+            formData.append("audio", blob, "comando.webm");
+
+            try {
+              const res = await fetch("/api/command/audio", { method: "POST", body: formData });
+              const data = await res.json();
+              renderDevices(data);
+              showUserFeedback(data);
+              loadAll();
+            } catch (err) {
+              showUserFeedback({ valid: false, transcribed_text: "", message: "Não foi possível enviar o áudio." });
+            } finally {
+              voiceStatus.innerHTML = 'Toque no microfone e diga, por exemplo: <strong>"ligar a luz do quarto"</strong>';
+            }
+          };
+
+          mediaRecorder.start();
+          isRecording = true;
+          micBtn.classList.add("recording");
+          micIcon.innerHTML = `<rect x="6" y="6" width="12" height="12" rx="2" fill="white"/>`;
+          voiceStatus.textContent = "Ouvindo... Toque novamente para enviar.";
+        } catch {
+          showUserFeedback({ valid: false, transcribed_text: "", message: "Permissão de microfone negada." });
+        }
+      } else {
+        isRecording = false;
+        micBtn.classList.remove("recording");
+        micIcon.innerHTML = `
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+        `;
+        mediaRecorder.stop();
+      }
+    });
+
+    loadAll();
+    setInterval(loadAll, 2000);
+    setInterval(() => {
+      if (!acTimerTargetMs) return;
+      const el = document.getElementById("acCountdown");
+      if (!el) return;
+      const leftSec = Math.ceil((acTimerTargetMs - Date.now()) / 1000);
+      if (leftSec <= 0) {
+        el.textContent = "00:00";
+        acTimerTargetMs = null;
+        lastDesligarEmIso = null;
+        setTimeout(loadAll, 250);
+      } else {
+        el.textContent = formatCountdown(leftSec);
+      }
+    }, 250);
+  </script>
+</body>
+</html>
