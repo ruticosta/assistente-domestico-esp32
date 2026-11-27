@@ -588,14 +588,14 @@
         <div class="card-title">
           <h2>CI 7400 — 4 Portas NAND (4 GPIOs → 4 Relés Active-LOW)</h2>
           <div class="reg-values">
-            <span>BIN <strong id="maskBin">0b0000</strong></span>
+            <span>BIN <strong id="maskBin">0b00000000</strong></span>
             <span>HEX <strong id="maskHex">0x00</strong></span>
             <span>DEC <strong id="maskDec">0</strong></span>
           </div>
         </div>
 
         <div class="bits-row" id="bitsRow"></div>
-        <div class="nand-note">Y = NOT(D AND ENABLE) · ENABLE = 1 (normal) · ENABLE = GND → todos os relés desligam por hardware</div>
+        <div class="nand-note">Y = NOT(D AND ENABLE) · ENABLE = 1 (normal) · ENABLE = GND → todos os relés desligam por hardware · bits 4..7 reservados para expansão</div>
 
         <div class="quick-cmds">
           <button type="button" class="quick-btn" data-cmd="ligar a luz do quarto">Testar D0 (Quarto)</button>
@@ -843,8 +843,8 @@
     function renderDevices(data) {
       updateFloorplan(data.devices);
 
-      // Atualiza painel técnico do CI 7400 (barramento de 4 bits)
-      maskBin.textContent = "0b" + (data.bitmask & 0x0F).toString(2).padStart(4, "0");
+      // Atualiza painel técnico do CI 7400 (máscara em 1 byte: bits 0..3 = relés, 4..7 reservados)
+      maskBin.textContent = "0b" + (data.bitmask & 0xFF).toString(2).padStart(8, "0");
       maskHex.textContent = data.hex || ("0x" + data.bitmask.toString(16).toUpperCase().padStart(2, "0"));
       maskDec.textContent = data.bitmask;
 
