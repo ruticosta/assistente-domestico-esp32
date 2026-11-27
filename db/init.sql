@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS historico_comandos (
     criado_em TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
--- Carga inicial dos 4 canais do Módulo Relé conectados ao CI 74HC595 (Q0..Q3)
+-- Carga inicial dos 4 canais do Módulo Relé acionados pelas saídas do CI 7400 NAND (1Y..4Y)
 INSERT INTO dispositivos (nome, localizacao, apelidos, bit_posicao, estado)
 VALUES
     ('Luz do Quarto',  'Quarto',  'quarto,luz do quarto,lampada do quarto,canal 1,rele 1', 0, FALSE),

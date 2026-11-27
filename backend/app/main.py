@@ -20,7 +20,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Assistente Doméstico Inteligente - API Distribuída",
-    description="Backend FastAPI para transcrição de voz, interpretação semântica, persistência PostgreSQL e controle de máscara de bits para ESP32 + 74HC595.",
+    description="Backend FastAPI para transcrição de voz, interpretação semântica, persistência PostgreSQL e controle de máscara de bits para ESP32 + CI 7400 (NAND).",
     version="2.0.0",
 )
 
@@ -274,7 +274,7 @@ def estado_hardware(request: Request, db: Session = Depends(get_db)):
     """
     Endpoint otimizado consumido pelo ESP32 via Wi-Fi.
     Registra a telemetria de conexão do ESP32 e retorna a máscara de bits atual
-    para o CI 74HC595 + status do último comando (para o LED de feedback).
+    para o barramento de 4 bits do CI 7400 (NAND) + status do último comando (para o LED de feedback).
     """
     esp32_telemetry["last_poll_ts"] = time.time()
     esp32_telemetry["ip"] = request.client.host if request.client else None

@@ -349,7 +349,7 @@
     .reg-values span { background: rgba(15, 23, 42, 0.9); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); color: var(--muted); }
     .reg-values strong { color: #38bdf8; }
 
-    .bits-row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 7px; }
+    .bits-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
     .bit-cell {
       background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border); border-radius: 10px;
       padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -360,7 +360,8 @@
     .bit-cell .q-lbl { font-size: 0.68rem; color: var(--muted); }
     .bit-cell .q-val { font-size: 1.1rem; font-weight: 700; }
     .bit-cell.on .q-val { color: #6ee7b7; }
-    .bit-cell .q-pin { font-size: 0.62rem; color: var(--subtle); }
+    .bit-cell .q-pin { font-size: 0.62rem; color: var(--subtle); text-align: center; }
+    .nand-note { margin-top: 8px; font-size: 0.72rem; color: var(--subtle); font-family: "JetBrains Mono", monospace; }
 
     .quick-cmds { display: flex; flex-wrap: wrap; gap: 8px; }
     .quick-btn {
@@ -570,7 +571,7 @@
           <div class="pipe-node" id="pipe-2"><div class="pipe-step">02</div><div><div class="pipe-title">FastAPI + STT</div><div class="pipe-desc">Transcrição &amp; NLP</div></div></div>
           <div class="pipe-node" id="pipe-3"><div class="pipe-step">03</div><div><div class="pipe-title">PostgreSQL</div><div class="pipe-desc">Estado &amp; Log</div></div></div>
           <div class="pipe-node" id="pipe-4"><div class="pipe-step">04</div><div><div class="pipe-title">ESP32 Wi-Fi</div><div class="pipe-desc">GET Bitmask</div></div></div>
-          <div class="pipe-node" id="pipe-5"><div class="pipe-step">05</div><div><div class="pipe-title">74HC595 → Relés</div><div class="pipe-desc">Shift Out 4ch</div></div></div>
+          <div class="pipe-node" id="pipe-5"><div class="pipe-step">05</div><div><div class="pipe-title">CI 7400 → Relés</div><div class="pipe-desc">NAND 4ch + ENABLE</div></div></div>
         </div>
       </div>
 
@@ -582,23 +583,24 @@
         <div class="kpi"><span class="kpi-label">Latência API</span><span class="kpi-value" id="kpiLatency">—</span><span class="kpi-sub">STT + NLP + SQL</span></div>
       </div>
 
-      <!-- Registrador 74HC595 + Atalhos de Teste -->
+      <!-- Barramento de 4 bits → CI 7400 (NAND) + Atalhos de Teste -->
       <div class="card">
         <div class="card-title">
-          <h2>Registrador de Deslocamento 74HC595 (3 GPIOs → 8 Saídas)</h2>
+          <h2>CI 7400 — 4 Portas NAND (4 GPIOs → 4 Relés Active-LOW)</h2>
           <div class="reg-values">
-            <span>BIN <strong id="maskBin">0b00000000</strong></span>
+            <span>BIN <strong id="maskBin">0b0000</strong></span>
             <span>HEX <strong id="maskHex">0x00</strong></span>
             <span>DEC <strong id="maskDec">0</strong></span>
           </div>
         </div>
 
         <div class="bits-row" id="bitsRow"></div>
+        <div class="nand-note">Y = NOT(D AND ENABLE) · ENABLE = 1 (normal) · ENABLE = GND → todos os relés desligam por hardware</div>
 
         <div class="quick-cmds">
-          <button type="button" class="quick-btn" data-cmd="ligar a luz do quarto">Testar Q0 (Quarto)</button>
-          <button type="button" class="quick-btn" data-cmd="ligar a luz da sala">Testar Q1 (Sala)</button>
-          <button type="button" class="quick-btn" data-cmd="ligar a luz da cozinha">Testar Q2 (Cozinha)</button>
+          <button type="button" class="quick-btn" data-cmd="ligar a luz do quarto">Testar D0 (Quarto)</button>
+          <button type="button" class="quick-btn" data-cmd="ligar a luz da sala">Testar D1 (Sala)</button>
+          <button type="button" class="quick-btn" data-cmd="ligar a luz da cozinha">Testar D2 (Cozinha)</button>
           <button type="button" class="quick-btn" data-cmd="ar condicionado temperatura minima">Ar: Mínima (16°C)</button>
           <button type="button" class="quick-btn" data-cmd="ar condicionado temperatura ambiente">Ar: Ambiente (24°C)</button>
           <button type="button" class="quick-btn test-err" data-cmd="abrir a janela">Simular Erro (LED Feedback)</button>
@@ -666,7 +668,13 @@
     let animFrame = null;
     let lastDevicesByBit = {};
 
-    const PIN_MAP_74HC595 = { 0: "Pino 15", 1: "Pino 1", 2: "Pino 2", 3: "Pino 3", 4: "Pino 4", 5: "Pino 5", 6: "Pino 6", 7: "Pino 7" };
+    // Bit da máscara → GPIO do ESP32 → porta NAND do CI 7400 (entrada A → saída Y) → relé
+    const PIN_MAP_7400 = {
+      0: { gpio: 25, porta: "1A→1Y", pinos: "1→3",   rele: "IN1" },
+      1: { gpio: 26, porta: "2A→2Y", pinos: "4→6",   rele: "IN2" },
+      2: { gpio: 27, porta: "3A→3Y", pinos: "9→8",   rele: "IN3" },
+      3: { gpio: 14, porta: "4A→4Y", pinos: "12→11", rele: "IN4" },
+    };
 
     // Toggle Modo Técnico
     techToggleBtn.addEventListener("click", () => {
@@ -835,8 +843,8 @@
     function renderDevices(data) {
       updateFloorplan(data.devices);
 
-      // Atualiza painel técnico do 74HC595
-      maskBin.textContent = "0b" + data.binary;
+      // Atualiza painel técnico do CI 7400 (barramento de 4 bits)
+      maskBin.textContent = "0b" + (data.bitmask & 0x0F).toString(2).padStart(4, "0");
       maskHex.textContent = data.hex || ("0x" + data.bitmask.toString(16).toUpperCase().padStart(2, "0"));
       maskDec.textContent = data.bitmask;
 
@@ -853,11 +861,14 @@
       }
 
       bitsRow.innerHTML = "";
-      for (let i = 7; i >= 0; i--) {
+      for (let i = 3; i >= 0; i--) {
         const bitVal = (data.bitmask >> i) & 1;
+        const pin = PIN_MAP_7400[i];
+        const saidaNand = bitVal ? 0 : 1; // com ENABLE = 1: Y = NOT(D)
         const cell = document.createElement("div");
-        cell.className = "bit-cell" + (bitVal ? " on" : "") + (i > 3 ? " unused" : "");
-        cell.innerHTML = `<span class="q-lbl">Q${i}</span><span class="q-val">${bitVal}</span><span class="q-pin">${PIN_MAP_74HC595[i]}</span>`;
+        cell.className = "bit-cell" + (bitVal ? " on" : "");
+        cell.title = `GPIO ${pin.gpio} → pino ${pin.pinos.replace("→", " → pino ")} do 7400 → ${pin.rele}`;
+        cell.innerHTML = `<span class="q-lbl">D${i} · GPIO ${pin.gpio}</span><span class="q-val">${bitVal}</span><span class="q-pin">${pin.porta} (pinos ${pin.pinos})<br>Y=${saidaNand} → ${pin.rele} ${bitVal ? "LIGA" : "OFF"}</span>`;
         bitsRow.appendChild(cell);
       }
 

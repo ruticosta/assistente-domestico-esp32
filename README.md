@@ -18,12 +18,31 @@ Para manter integralmente o princípio de **processamento distribuído** sem o m
         │
         │  HTTP GET /api/hardware/state (Wi-Fi)
         ▼
-[ESP32 WROOM DevKit V1]    ──► shiftOut() serial (3 GPIOs) + LED de feedback
+[ESP32 WROOM DevKit V1]    ──► Barramento paralelo de 4 bits (GPIO 25, 26, 27, 14) + LED de feedback (GPIO 2)
         ▼
-[CI 74HC595 Shift Register]──► Expansão serial → paralela (Q0..Q3)
+[CI 7400 (4 portas NAND)]  ──► Driver Active-LOW: entrada A = bit D_i, entrada B = trava ENABLE (1Y..4Y)
         ▼
 [Módulo Relé 4 Canais 5V]  ──► Acionamento das cargas elétricas
 ```
+
+### Camada de Borda: CI 7400 + Trava `ENABLE` em Hardware
+
+Cada bit da máscara (D0..D3) é aplicado diretamente em um GPIO do ESP32 e entra na **entrada A** de uma porta NAND do CI `7400` (`74HC00`/`74LS00`/`74HCT00`). As **entradas B** das 4 portas são interligadas na linha **`ENABLE`**, que funciona como trava de segurança física:
+
+| `D_i` (ESP32) | `ENABLE` | Saída NAND (`Y_i` → `IN` do relé) | Relé (Active-LOW) |
+| :---: | :---: | :---: | :--- |
+| `0` | `1` | `1` | Desligado |
+| `1` | `1` | `0` | **Ligado** |
+| `X` | `0` | `1` | **Todos desligados por hardware** |
+
+| Bit | GPIO | Pino do 7400 (entrada → saída) | Relé | Dispositivo |
+| :---: | :---: | :---: | :---: | :--- |
+| 0 | 25 | 1 (1A) → 3 (1Y) | IN1 | Luz do Quarto |
+| 1 | 26 | 4 (2A) → 6 (2Y) | IN2 | Luz da Sala |
+| 2 | 27 | 9 (3A) → 8 (3Y) | IN3 | Luz da Cozinha |
+| 3 | 14 | 12 (4A) → 11 (4Y) | IN4 | Ar-Condicionado |
+
+Detalhes completos de montagem em [`docs/esquema_protoboard.md`](docs/esquema_protoboard.md).
 
 ---
 
@@ -31,7 +50,7 @@ Para manter integralmente o princípio de **processamento distribuído** sem o m
 
 1. Entre na pasta do projeto e suba os containers:
    ```bash
-   cd /home/ruti/assistente-domestico-esp32
+   cd assistente-domestico-esp32
    docker compose up --build -d
    ```
 2. Acesse no navegador do seu notebook:
@@ -64,6 +83,21 @@ Para manter integralmente o princípio de **processamento distribuído** sem o m
    const char* API_STATE_URL = "http://IP_DO_NOTEBOOK:8000/api/hardware/state";
    ```
 4. Siga as ligações físicas em [`docs/esquema_protoboard.md`](docs/esquema_protoboard.md) e faça o upload para o ESP32.
+
+### Alternativa: Modo Ponte USB (sem Wi-Fi)
+
+Se o Wi-Fi não estiver configurado (SSID padrão `NOME_DA_SUA_REDE_WIFI`), o firmware opera em **Modo Ponte USB Serial**, aceitando a máscara (`0`..`15`) pelo cabo USB. Nesse caso, rode no notebook a ponte que consulta a API e repassa a máscara ao ESP32:
+
+```bash
+pip install pyserial
+python3 bridge_usb.py
+```
+
+A URL da API pode ser alterada pela variável de ambiente `API_STATE_URL` (padrão: `http://localhost:8000/api/hardware/state`).
+
+### Teste de Bancada pelo Monitor Serial
+
+No Monitor Serial (`115200 baud`), digite um número de `0` a `15` para acionar os relés diretamente, ou `E` para simular um comando inválido (o LED de feedback pisca).
 
 ---
 
